@@ -138,6 +138,11 @@ JWT.sign = function(payload, secretOrPrivateKey, options, callback) {
   }
 };
 
+// The time-zone offset is the difference, in minutes, between UTC and local time. 
+// Note that this means that the offset is positive if the local timezone is behind UTC and negative if it is ahead. 
+// For example, if your time zone is UTC+10 (Australian Eastern Standard Time), -600 will be returned. 
+// Daylight savings time prevents this value from being a constant even for a given locale.
+// new Date().getTimezoneOffset();
 JWT.verify = function(jwtString, secretOrPublicKey, options, callback) {
   if ((typeof options === 'function') && !callback) {
     callback = options;
@@ -219,22 +224,25 @@ JWT.verify = function(jwtString, secretOrPublicKey, options, callback) {
     return done(new JsonWebTokenError('invalid signature'));
 
   var payload;
-
+  
   try {
     payload = JWT.decode(jwtString);
   } catch(err) {
     return done(err);
   }
 
+  var offset = (new Date().getTimezoneOffset() * 60 * 1000) * -1;
+
   if (typeof payload.nbf !== 'undefined' && !options.ignoreNotBefore) {
     if (typeof payload.nbf !== 'number') {
       return done(new JsonWebTokenError('invalid nbf value'));
     }
-    if (payload.nbf > Math.floor(Date.now() / 1000)) {
+//  if (payload.nbf > Math.floor(Date.now() / 1000)) {
+    if (payload.nbf > Math.floor(new Date(Date.now() + offset) / 1000)) {
       return done(new NotBeforeError('jwt not active', new Date(payload.nbf * 1000)));
     }
   }
-
+  
   if (typeof payload.exp !== 'undefined' && !options.ignoreExpiration) {
     if (typeof payload.exp !== 'number') {
       return done(new JsonWebTokenError('invalid exp value'));
